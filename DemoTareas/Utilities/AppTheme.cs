@@ -1,3 +1,7 @@
+// Autor:   DemoTareas Team
+// Fecha:   2026-06-18
+// Versión: 1.0
+
 using System.Drawing;
 
 namespace DemoTareas.Utilities;
@@ -61,10 +65,14 @@ public static class AppTheme
     public static void ApplyFlatButton(Button button, bool primary)
     {
         button.FlatStyle = FlatStyle.Flat;
-        button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.BorderSize = primary ? 0 : 1;
+        button.FlatAppearance.BorderColor = primary ? AccentColor : BorderColor;
         button.BackColor = primary ? AccentColor : SurfaceColor;
         button.ForeColor = primary ? Color.White : AccentColor;
+        button.FlatAppearance.MouseOverBackColor = primary ? AccentDark : Color.FromArgb(237, 235, 250);
+        button.FlatAppearance.MouseDownBackColor = primary ? AccentDark : Color.FromArgb(225, 222, 245);
         button.Font = FontSmall;
+        button.Height = 32;
         button.UseVisualStyleBackColor = false;
     }
 
