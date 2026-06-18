@@ -68,3 +68,26 @@
 - Autenticación o multi-usuario
 - Notificaciones o recordatorios de fecha
 - UI avanzada (temas, iconos personalizados)
+
+---
+
+## Fase 7 – Departamento de Persona ✅ Completada
+**Fecha:** 2026-06-16
+
+### Cambio implementado
+Se añadió la propiedad `Departamento` (string?, opcional) al modelo `Persona`, con soporte completo en servicio, formulario, migración y pruebas.
+
+### Tareas realizadas
+25. Añadir propiedad `Departamento` (string?, opcional) a `Models/Persona.cs`
+26. Actualizar `PersonaService.Update` para copiar `Departamento` al persistir cambios
+27. Crear migración `20260616120000_AddDepartamentoToPersona` y actualizar snapshot de EF Core
+28. Añadir campo `_txtDepartamento` en `Forms/PersonaForm.cs` con soporte de precarga, creación y edición
+29. Añadir test `Update_PersonaExistente_ActualizaDepartamento` en `DemoTareas.Tests/PersonaServiceTests.cs`
+
+### Archivos afectados
+- `DemoTareas/Models/Persona.cs`
+- `DemoTareas/Services/PersonaService.cs`
+- `DemoTareas/Migrations/20260616120000_AddDepartamentoToPersona.cs`
+- `DemoTareas/Migrations/TareasDbContextModelSnapshot.cs`
+- `DemoTareas/Forms/PersonaForm.cs`
+- `DemoTareas.Tests/PersonaServiceTests.cs`

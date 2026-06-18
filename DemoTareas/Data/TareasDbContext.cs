@@ -7,6 +7,7 @@ public class TareasDbContext : DbContext
 {
     public DbSet<Tarea> Tareas { get; set; }
     public DbSet<Categoria> Categorias { get; set; }
+    public DbSet<Persona> Personas { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -21,6 +22,10 @@ public class TareasDbContext : DbContext
     {
         modelBuilder.Entity<Categoria>()
             .HasIndex(c => c.Nombre)
+            .IsUnique();
+
+        modelBuilder.Entity<Persona>()
+            .HasIndex(p => new { p.Nombre, p.Apellido })
             .IsUnique();
 
         modelBuilder.Entity<Tarea>()

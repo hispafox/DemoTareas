@@ -8,29 +8,37 @@ public class MainForm : Form
 {
     private readonly ITareaService _tareaService;
     private readonly ICategoriaService _categoriaService;
-
-    private FlowLayoutPanel _flowTareas = null!;
-    private ComboBox _cboFiltroEstado = null!;
-    private ComboBox _cboFiltroCategoria = null!;
-    private ComboBox _cboFiltroPrioridad = null!;
-    private Button _btnCategorias = null!;
-    private TextBox _txtNueva = null!;
-    private Label _lblCount = null!;
+    private readonly IPersonaService _personaService;
 
     // Controles recoloreados al cambiar el tema.
     private Panel _topBar = null!;
     private Label _addIcon = null!;
     private Button _btnTema = null!;
+    private FlowLayoutPanel _flowTareas = null!;
+    private ComboBox _cboFiltroEstado = null!;
+    private ComboBox _cboFiltroCategoria = null!;
+    private ComboBox _cboFiltroPrioridad = null!;
+    private Button _btnCategorias = null!;
+    private Button _btnPersonas = null!;
+    private TextBox _txtNueva = null!;
+    private Label _lblCount = null!;
 
-    public MainForm(ITareaService tareaService, ICategoriaService categoriaService)
+    public MainForm(ITareaService tareaService, ICategoriaService categoriaService, IPersonaService personaService)
     {
         _tareaService = tareaService;
         _categoriaService = categoriaService;
+        _personaService = personaService;
         InitializeComponent();
         ApplyThemeToUi();
         AppTheme.ThemeChanged += ApplyThemeToUi;
         RefrescarFiltros();
         RefrescarGrid();
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        AppTheme.ThemeChanged -= ApplyThemeToUi;
+        base.OnFormClosed(e);
     }
 
     private void InitializeComponent()
@@ -100,7 +108,11 @@ public class MainForm : Form
         AppTheme.ApplyFlatButton(_btnCategorias, false);
         _btnCategorias.Click += (s, e) => AbrirCategorias();
 
-        panelAdd.Controls.AddRange(new Control[] { _addIcon, _txtNueva, _btnCategorias });
+        _btnPersonas = new Button { Text = "Personas", Location = new Point(790, 8), Width = 90, FlatStyle = FlatStyle.Flat };
+        AppTheme.ApplyFlatButton(_btnPersonas, false);
+        _btnPersonas.Click += (s, e) => AbrirPersonas();
+
+        panelAdd.Controls.AddRange(new Control[] { _addIcon, _txtNueva, _btnCategorias, _btnPersonas });
 
         Controls.Add(_flowTareas);
         Controls.Add(panelAdd);
@@ -108,11 +120,6 @@ public class MainForm : Form
         Controls.Add(_topBar);
     }
 
-    protected override void OnFormClosed(FormClosedEventArgs e)
-    {
-        AppTheme.ThemeChanged -= ApplyThemeToUi;
-        base.OnFormClosed(e);
-    }
 
     /// <summary>Recolorea los elementos dependientes del acento con el tema activo.</summary>
     private void ApplyThemeToUi()
@@ -129,6 +136,7 @@ public class MainForm : Form
         _btnTema.UseVisualStyleBackColor = false;
 
         AppTheme.ApplyFlatButton(_btnCategorias, false);
+        AppTheme.ApplyFlatButton(_btnPersonas, false);
 
         // Los ítems leen el acento al pintarse; basta con repintarlos.
         foreach (Control c in _flowTareas.Controls)
@@ -184,7 +192,20 @@ public class MainForm : Form
         AjustarAnchoItems();
         _lblCount.Text = $"{tareas.Count} tareas";
     }
+    
+       private void AbrirCategorias()
+    {
+        using var form = new CategoriaForm(_categoriaService);
+        form.ShowDialog(this);
+        RefrescarFiltros();
+        RefrescarGrid();
+    }
 
+    private void AbrirPersonas()
+    {
+        using var form = new PersonaForm(_personaService);
+        form.ShowDialog(this);
+    }
     /// <summary>Hace que cada ítem ocupe el ancho disponible del panel (el FlowLayoutPanel no estira sus hijos).</summary>
     private void AjustarAnchoItems()
     {
@@ -277,11 +298,5 @@ public class MainForm : Form
         RefrescarGrid();
     }
 
-    private void AbrirCategorias()
-    {
-        using var form = new CategoriaForm(_categoriaService);
-        form.ShowDialog(this);
-        RefrescarFiltros();
-        RefrescarGrid();
-    }
+ 
 }
