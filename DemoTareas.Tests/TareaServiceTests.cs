@@ -97,4 +97,38 @@ public class TareaServiceTests
         Assert.Equal(2, result.Count);
         Assert.All(result, t => Assert.Equal(Prioridad.Alta, t.Prioridad));
     }
+
+    // Issue #7: filtrar por estado
+    [Fact]
+    public void GetFiltered_PorEstado_DevuelveSoloLasDeEseEstado()
+    {
+        var repo = new FakeTareaRepository();
+        repo.Add(new Tarea { Titulo = "A", Estado = EstadoTarea.Pendiente });
+        repo.Add(new Tarea { Titulo = "B", Estado = EstadoTarea.Completada });
+        repo.Add(new Tarea { Titulo = "C", Estado = EstadoTarea.Completada });
+        repo.Add(new Tarea { Titulo = "D", Estado = EstadoTarea.Pendiente });
+        var service = new TareaService(repo);
+
+        var result = service.GetFiltered(estado: EstadoTarea.Pendiente);
+
+        Assert.Equal(2, result.Count);
+        Assert.All(result, t => Assert.Equal(EstadoTarea.Pendiente, t.Estado));
+    }
+
+    // Issue #4: Update no debe rechazar tareas con fecha de vencimiento ya pasada
+    [Fact]
+    public void Update_TareaConFechaPasada_NoLanzaExcepcion()
+    {
+        var repo = new FakeTareaRepository();
+        var tarea = new Tarea { Titulo = "Test", Estado = EstadoTarea.Pendiente };
+        repo.Add(tarea);
+        var service = new TareaService(repo);
+
+        tarea.FechaVencimiento = DateOnly.FromDateTime(DateTime.Today.AddDays(-5));
+        tarea.Titulo = "Título actualizado";
+
+        var ex = Record.Exception(() => service.Update(tarea));
+
+        Assert.Null(ex);
+    }
 }

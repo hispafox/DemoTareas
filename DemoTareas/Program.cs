@@ -18,7 +18,11 @@ static class Program
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             MessageBox.Show(e.ExceptionObject?.ToString(), "Error crítico", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         ApplicationConfiguration.Initialize();
+#pragma warning disable WFO5001
+        Application.SetColorMode(SystemColorMode.System);
+#pragma warning restore WFO5001
         ThemeSettings.Load();
 
         var logPath = Path.Combine(

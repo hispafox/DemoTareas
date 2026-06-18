@@ -1,12 +1,16 @@
 using DemoTareas.Models;
 using DemoTareas.Services;
+using DemoTareas.Utilities;
 
 namespace DemoTareas.Forms;
 
 public class PersonaForm : Form
 {
+    private sealed record PersonaItem(int Id, string NombreCompleto);
+
     private readonly IPersonaService _personaService;
 
+    private Panel _header = null!;
     private ListBox _lstPersonas = null!;
     private TextBox _txtNombre = null!;
     private TextBox _txtApellido = null!;
@@ -21,66 +25,135 @@ public class PersonaForm : Form
     {
         _personaService = personaService;
         InitializeComponent();
+        ApplyTheme();
+        AppTheme.ThemeChanged += ApplyTheme;
         RefrescarLista();
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        AppTheme.ThemeChanged -= ApplyTheme;
+        base.OnFormClosed(e);
+    }
+
+    private void ApplyTheme()
+    {
+        _header.BackColor = AppTheme.AccentColor;
+        AppTheme.ApplyFlatButton(_btnAgregar, true);
+        AppTheme.ApplyFlatButton(_btnEditar, false);
+        AppTheme.ApplyFlatButton(_btnEliminar, false);
+        AppTheme.ApplyFlatButton(_btnCerrar, false);
     }
 
     private void InitializeComponent()
     {
         Text = "Gestionar personas";
-        Size = new Size(420, 500);
+        Size = new Size(440, 560);
+        MinimumSize = new Size(440, 520);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
+        BackColor = AppTheme.SurfaceColor;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Font = AppTheme.FontSmall;
 
-        var lblNombre = new Label { Text = "Nombre:", Location = new Point(12, 14), AutoSize = true };
-        _txtNombre = new TextBox { Location = new Point(12, 32), Width = 180 };
+        _header = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = AppTheme.AccentColor };
+        var lblHeaderTitle = new Label { Text = "Personas", ForeColor = Color.White, Font = AppTheme.FontTitle, Location = new Point(18, 16), AutoSize = true };
+        _header.Controls.Add(lblHeaderTitle);
 
-        var lblApellido = new Label { Text = "Apellido:", Location = new Point(210, 14), AutoSize = true };
-        _txtApellido = new TextBox { Location = new Point(210, 32), Width = 180 };
+        // Sección de campos (TableLayoutPanel)
+        var fields = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
+            RowCount = 5,
+            Padding = new Padding(16, 10, 16, 8),
+            BackColor = AppTheme.SurfaceColor
+        };
+        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        for (int i = 0; i < 5; i++)
+            fields.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        fields.Paint += (s, e) => e.Graphics.DrawLine(new Pen(AppTheme.BorderColor, 1), 0, fields.Height - 1, fields.Width, fields.Height - 1);
 
-        var lblEdad = new Label { Text = "Edad:", Location = new Point(12, 68), AutoSize = true };
-        _numEdad = new NumericUpDown { Location = new Point(12, 86), Width = 100, Minimum = 0, Maximum = 120 };
+        // Fila 0–1: Nombre | Apellido
+        var lblNombre = new Label { Text = "NOMBRE", AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta, Margin = new Padding(0, 0, 0, 2) };
+        _txtNombre = new TextBox { Dock = DockStyle.Fill, Font = AppTheme.FontItem, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(0, 0, 8, 8) };
+        var lblApellido = new Label { Text = "APELLIDO", AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta, Margin = new Padding(8, 0, 0, 2) };
+        _txtApellido = new TextBox { Dock = DockStyle.Fill, Font = AppTheme.FontItem, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(8, 0, 0, 8) };
+        fields.Controls.Add(lblNombre, 0, 0);
+        fields.Controls.Add(lblApellido, 1, 0);
+        fields.Controls.Add(_txtNombre, 0, 1);
+        fields.Controls.Add(_txtApellido, 1, 1);
 
-        var lblDepartamento = new Label { Text = "Departamento:", Location = new Point(12, 120), AutoSize = true };
-        _txtDepartamento = new TextBox { Location = new Point(12, 138), Width = 378 };
+        // Fila 2–3: Edad | Departamento
+        var lblEdad = new Label { Text = "EDAD", AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta, Margin = new Padding(0, 0, 0, 2) };
+        _numEdad = new NumericUpDown { Dock = DockStyle.Fill, Minimum = 0, Maximum = 120, Font = AppTheme.FontItem, Margin = new Padding(0, 0, 8, 8) };
+        var lblDepartamento = new Label { Text = "DEPARTAMENTO", AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta, Margin = new Padding(8, 0, 0, 2) };
+        _txtDepartamento = new TextBox { Dock = DockStyle.Fill, Font = AppTheme.FontItem, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(8, 0, 0, 8) };
+        fields.Controls.Add(lblEdad, 0, 2);
+        fields.Controls.Add(lblDepartamento, 1, 2);
+        fields.Controls.Add(_numEdad, 0, 3);
+        fields.Controls.Add(_txtDepartamento, 1, 3);
 
-        _btnAgregar = new Button { Text = "Agregar", Location = new Point(130, 176), Width = 80 };
+        // Fila 4: botones de acción
+        var actionFlow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Margin = new Padding(0, 4, 0, 4)
+        };
+        _btnAgregar = new Button { Text = "Agregar", Width = 88, Height = 32, Margin = new Padding(8, 0, 0, 0) };
         _btnAgregar.Click += BtnAgregar_Click;
-
-        _btnEditar = new Button { Text = "Editar", Location = new Point(220, 176), Width = 80 };
+        _btnEditar = new Button { Text = "Editar", Width = 88, Height = 32, Margin = new Padding(8, 0, 0, 0) };
         _btnEditar.Click += BtnEditar_Click;
-
-        _btnEliminar = new Button { Text = "Eliminar", Location = new Point(310, 176), Width = 80 };
+        _btnEliminar = new Button { Text = "Eliminar", Width = 88, Height = 32, Margin = new Padding(0, 0, 0, 0) };
         _btnEliminar.Click += BtnEliminar_Click;
+        actionFlow.Controls.Add(_btnAgregar);
+        actionFlow.Controls.Add(_btnEditar);
+        actionFlow.Controls.Add(_btnEliminar);
+        fields.Controls.Add(actionFlow, 0, 4);
+        fields.SetColumnSpan(actionFlow, 2);
 
+        // Lista
         _lstPersonas = new ListBox
         {
-            Location = new Point(12, 218),
-            Width = 378,
-            Height = 195,
-            DisplayMember = "NombreCompleto"
+            Dock = DockStyle.Fill,
+            DisplayMember = "NombreCompleto",
+            Font = AppTheme.FontItem,
+            BackColor = AppTheme.SurfaceColor,
+            ForeColor = AppTheme.TextPrimary,
+            BorderStyle = BorderStyle.None
         };
         _lstPersonas.SelectedIndexChanged += LstPersonas_SelectedIndexChanged;
 
+        // Footer
+        var footer = new Panel { Dock = DockStyle.Bottom, Height = 52, BackColor = AppTheme.SurfaceColor };
+        footer.Paint += (s, e) => e.Graphics.DrawLine(new Pen(AppTheme.BorderColor, 1), 0, 0, footer.Width, 0);
         _btnCerrar = new Button
         {
             Text = "Cerrar",
-            Location = new Point(310, 424),
-            Width = 80,
+            Width = 88,
+            Height = 32,
+            Margin = new Padding(0, 10, 8, 10),
             DialogResult = DialogResult.Cancel
         };
-
-        Controls.AddRange(new Control[]
+        var closeBtnFlow = new FlowLayoutPanel
         {
-            lblNombre, _txtNombre,
-            lblApellido, _txtApellido,
-            lblEdad, _numEdad,
-            lblDepartamento, _txtDepartamento,
-            _btnAgregar, _btnEditar, _btnEliminar,
-            _lstPersonas,
-            _btnCerrar
-        });
+            Dock = DockStyle.Right,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            AutoSize = true
+        };
+        closeBtnFlow.Controls.Add(_btnCerrar);
+        footer.Controls.Add(closeBtnFlow);
+
+        Controls.Add(_lstPersonas);
+        Controls.Add(footer);
+        Controls.Add(fields);
+        Controls.Add(_header);
 
         CancelButton = _btnCerrar;
     }
@@ -88,13 +161,12 @@ public class PersonaForm : Form
     private void RefrescarLista()
     {
         _lstPersonas.DataSource = null;
-        _lstPersonas.DataSource = _personaService.GetAll().Select(p => new
-        {
-            p.Id,
-            NombreCompleto = $"{p.Nombre} {p.Apellido} — Edad: {p.Edad}" +
-                (string.IsNullOrEmpty(p.Departamento) ? "" : $" — {p.Departamento}")
-        }).ToList();
-        _lstPersonas.DisplayMember = "NombreCompleto";
+        _lstPersonas.DataSource = _personaService.GetAll()
+            .Select(p => new PersonaItem(p.Id,
+                $"{p.Nombre} {p.Apellido} — Edad: {p.Edad}" +
+                (string.IsNullOrEmpty(p.Departamento) ? "" : $" — {p.Departamento}")))
+            .ToList();
+        _lstPersonas.DisplayMember = nameof(PersonaItem.NombreCompleto);
     }
 
     private void BtnAgregar_Click(object? sender, EventArgs e)
@@ -119,10 +191,9 @@ public class PersonaForm : Form
 
     private void BtnEditar_Click(object? sender, EventArgs e)
     {
-        if (_lstPersonas.SelectedValue is not { } selected) return;
+        if (_lstPersonas.SelectedItem is not PersonaItem item) return;
 
-        var id = (int)((dynamic)selected).Id;
-        var actual = _personaService.GetAll().FirstOrDefault(p => p.Id == id);
+        var actual = _personaService.GetAll().FirstOrDefault(p => p.Id == item.Id);
         if (actual is null) return;
 
         try
@@ -145,16 +216,15 @@ public class PersonaForm : Form
 
     private void BtnEliminar_Click(object? sender, EventArgs e)
     {
-        if (_lstPersonas.SelectedValue is not { } selected) return;
+        if (_lstPersonas.SelectedItem is not PersonaItem item) return;
 
-        var id = (int)((dynamic)selected).Id;
-        var actual = _personaService.GetAll().FirstOrDefault(p => p.Id == id);
+        var actual = _personaService.GetAll().FirstOrDefault(p => p.Id == item.Id);
         if (actual is null) return;
 
         var confirm = MessageBox.Show($"¿Eliminar a {actual.Nombre} {actual.Apellido}?", "Confirmar", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
         if (confirm != DialogResult.Yes) return;
 
-        _personaService.Delete(id);
+        _personaService.Delete(item.Id);
         RefrescarLista();
     }
 
@@ -168,9 +238,8 @@ public class PersonaForm : Form
 
     private void LstPersonas_SelectedIndexChanged(object? sender, EventArgs e)
     {
-        if (_lstPersonas.SelectedValue is not { } selected) return;
-        var id = (int)((dynamic)selected).Id;
-        var actual = _personaService.GetAll().FirstOrDefault(p => p.Id == id);
+        if (_lstPersonas.SelectedItem is not PersonaItem item) return;
+        var actual = _personaService.GetAll().FirstOrDefault(p => p.Id == item.Id);
         if (actual is null) return;
         _txtNombre.Text = actual.Nombre;
         _txtApellido.Text = actual.Apellido;

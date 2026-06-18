@@ -16,30 +16,20 @@ public class TareaService : ITareaService
 
     public IList<Tarea> GetFiltered(EstadoTarea? estado = null, int? categoriaId = null, Prioridad? prioridad = null)
     {
-        var tareas = _repository.GetAll();
-
-        if (estado.HasValue)
-            tareas = tareas.Where(t => t.Estado == estado.Value).ToList();
-
-        if (categoriaId.HasValue)
-            tareas = tareas.Where(t => t.CategoriaId == categoriaId.Value).ToList();
-
-        if (prioridad.HasValue)
-            tareas = tareas.Where(t => t.Prioridad == prioridad.Value).ToList();
-
-        return tareas;
+        return _repository.GetFiltered(estado, categoriaId, prioridad);
     }
 
     public void Add(Tarea tarea)
     {
-        ValidarTarea(tarea);
+        ValidarTareaBase(tarea);
+        ValidarFechaVencimiento(tarea);
         tarea.FechaCreacion = DateTime.UtcNow;
         _repository.Add(tarea);
     }
 
     public void Update(Tarea tarea)
     {
-        ValidarTarea(tarea);
+        ValidarTareaBase(tarea);
         _repository.Update(tarea);
     }
 
@@ -57,11 +47,14 @@ public class TareaService : ITareaService
         _repository.Update(tarea);
     }
 
-    private static void ValidarTarea(Tarea tarea)
+    private static void ValidarTareaBase(Tarea tarea)
     {
         if (string.IsNullOrWhiteSpace(tarea.Titulo))
             throw new ArgumentException("El título de la tarea no puede estar vacío.");
+    }
 
+    private static void ValidarFechaVencimiento(Tarea tarea)
+    {
         if (tarea.FechaVencimiento.HasValue)
         {
             var hoy = DateOnly.FromDateTime(DateTime.Today);

@@ -10,6 +10,15 @@ public class FakeTareaRepository : ITareaRepository
 
     public IList<Tarea> GetAll() => _tareas.ToList();
 
+    public IList<Tarea> GetFiltered(EstadoTarea? estado, int? categoriaId, Prioridad? prioridad)
+    {
+        IEnumerable<Tarea> query = _tareas;
+        if (estado.HasValue) query = query.Where(t => t.Estado == estado.Value);
+        if (categoriaId.HasValue) query = query.Where(t => t.CategoriaId == categoriaId.Value);
+        if (prioridad.HasValue) query = query.Where(t => t.Prioridad == prioridad.Value);
+        return query.OrderByDescending(t => t.FechaCreacion).ToList();
+    }
+
     public Tarea? GetById(int id) => _tareas.FirstOrDefault(t => t.Id == id);
 
     public void Add(Tarea tarea)

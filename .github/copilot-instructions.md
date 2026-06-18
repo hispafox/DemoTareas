@@ -96,6 +96,17 @@ El diseño visual debe inspirarse en Microsoft To Do. Características clave a r
 - Evita código duplicado; extrae lógica reutilizable a métodos, servicios o utilidades.
 - Mantén los métodos pequeños, fáciles de probar y fáciles de mantener.
 
+## GitHub Issues — uso obligatorio de MCP
+
+Toda interacción con GitHub Issues **debe realizarse exclusivamente a través de las herramientas MCP** (`mcp_github_mcp_se_*`). Queda prohibido usar comandos de terminal (`gh`, `git`, `curl`) o URLs directas para leer, crear o actualizar issues.
+
+### Obligaciones concretas
+- **Consultar issues**: usa `mcp_github_mcp_se_list_issues` o `mcp_github_mcp_se_issue_read` antes de empezar a trabajar en una corrección.
+- **Comentar el progreso**: al terminar cada fix, añade un comentario al issue correspondiente con `mcp_github_mcp_se_add_issue_comment` indicando qué se cambió y en qué archivo.
+- **Cerrar el issue**: cuando el fix esté completo y verificado, ciérralo con `mcp_github_mcp_se_issue_write` (state: closed).
+- **Crear issues nuevos**: si durante el desarrollo se detecta un defecto nuevo, créalo con `mcp_github_mcp_se_issue_write` antes de corregirlo.
+- **Repositorio de referencia**: owner `hispafox`, repo `DemoTareas`.
+
 ## Respuestas esperadas de Copilot
 Cuando generes código para este proyecto:
 - Propón soluciones compatibles con aplicaciones de escritorio Windows Forms en .NET 10.

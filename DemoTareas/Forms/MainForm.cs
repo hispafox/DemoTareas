@@ -10,6 +10,16 @@ public class MainForm : Form
     private readonly ICategoriaService _categoriaService;
     private readonly IPersonaService _personaService;
 
+    private static readonly string[] OpcionesOrden =
+    [
+        "Fecha (reciente)",
+        "Fecha (antigua)",
+        "Prioridad (alta→baja)",
+        "Prioridad (baja→alta)",
+        "Vencimiento (próximo)",
+        "Nombre (A→Z)"
+    ];
+
     // Controles recoloreados al cambiar el tema.
     private Panel _topBar = null!;
     private Label _addIcon = null!;
@@ -18,6 +28,9 @@ public class MainForm : Form
     private ComboBox _cboFiltroEstado = null!;
     private ComboBox _cboFiltroCategoria = null!;
     private ComboBox _cboFiltroPrioridad = null!;
+    private ComboBox _cboOrdenar = null!;
+    private TextBox _txtBusqueda = null!;
+    private Label _lblEmpty = null!;
     private Button _btnCategorias = null!;
     private Button _btnPersonas = null!;
     private TextBox _txtNueva = null!;
@@ -48,6 +61,8 @@ public class MainForm : Form
         MinimumSize = new Size(760, 480);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = AppTheme.BackgroundColor;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Font = AppTheme.FontSmall;
 
         _topBar = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = AppTheme.AccentColor };
         var title = new Label { Text = "Mis tareas", ForeColor = Color.White, Font = AppTheme.FontTitle, Location = new Point(18, 18), AutoSize = true };
@@ -57,7 +72,7 @@ public class MainForm : Form
             Dock = DockStyle.Right,
             FlowDirection = FlowDirection.RightToLeft,
             WrapContents = false,
-            Width = 220,
+            Width = 360,
             Padding = new Padding(0, 14, 12, 0),
             BackColor = Color.Transparent
         };
@@ -65,59 +80,155 @@ public class MainForm : Form
         _btnTema = new Button { Text = "🎨 Tema", AutoSize = true, Height = 28, Cursor = Cursors.Hand, TabStop = false, Margin = new Padding(0, 0, 0, 0) };
         _btnTema.Click += (s, e) => AbrirSelectorTema();
 
+        var btnNueva = new Button { Text = "+ Nueva tarea", AutoSize = true, Height = 28, Cursor = Cursors.Hand, TabStop = false, Margin = new Padding(0, 0, 8, 0) };
+        btnNueva.Click += (s, e) => NuevaTarea();
+        btnNueva.FlatStyle = FlatStyle.Flat;
+        btnNueva.FlatAppearance.BorderSize = 0;
+        btnNueva.BackColor = Color.FromArgb(26, 74, 156);
+        btnNueva.ForeColor = Color.White;
+        btnNueva.Font = AppTheme.FontSmall;
+        btnNueva.UseVisualStyleBackColor = false;
+
         _lblCount = new Label { Text = "0 tareas", ForeColor = Color.FromArgb(225, 235, 255), Font = AppTheme.FontSmall, AutoSize = true, Margin = new Padding(0, 6, 14, 0) };
 
         rightZone.Controls.Add(_btnTema);
+        rightZone.Controls.Add(btnNueva);
         rightZone.Controls.Add(_lblCount);
         _topBar.Controls.AddRange(new Control[] { title, rightZone });
 
-        var panelFiltros = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = AppTheme.FilterBarColor };
-        var lblEstado = new Label { Text = "Estado", Location = new Point(14, 10), AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta };
-        _cboFiltroEstado = new ComboBox { Location = new Point(60, 7), Width = 120, FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList };
+        var panelFiltros = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 48,
+            ColumnCount = 5,
+            RowCount = 1,
+            BackColor = AppTheme.FilterBarColor,
+            Padding = new Padding(4, 0, 4, 0)
+        };
+        panelFiltros.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 148));  // Estado
+        panelFiltros.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 168));  // Categoría
+        panelFiltros.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 148));  // Prioridad
+        panelFiltros.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));  // Ordenar
+        panelFiltros.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));   // Búsqueda
+        panelFiltros.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        _cboFiltroEstado = new ComboBox { FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList, Font = AppTheme.FontSmall, Dock = DockStyle.Fill, Margin = new Padding(0) };
         _cboFiltroEstado.Items.Add("(Todos)");
         _cboFiltroEstado.Items.AddRange(Enum.GetNames<EstadoTarea>());
         _cboFiltroEstado.SelectedIndex = 0;
         _cboFiltroEstado.SelectedIndexChanged += (s, e) => RefrescarGrid();
 
-        var lblCat = new Label { Text = "Categoría", Location = new Point(190, 10), AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta };
-        _cboFiltroCategoria = new ComboBox { Location = new Point(250, 7), Width = 150, FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList };
+        _cboFiltroCategoria = new ComboBox { FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList, Font = AppTheme.FontSmall, Dock = DockStyle.Fill, Margin = new Padding(0) };
         _cboFiltroCategoria.SelectedIndexChanged += (s, e) => RefrescarGrid();
 
-        var lblPri = new Label { Text = "Prioridad", Location = new Point(410, 10), AutoSize = true, ForeColor = AppTheme.TextSecondary, Font = AppTheme.FontMeta };
-        _cboFiltroPrioridad = new ComboBox { Location = new Point(470, 7), Width = 120, FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList };
+        _cboFiltroPrioridad = new ComboBox { FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList, Font = AppTheme.FontSmall, Dock = DockStyle.Fill, Margin = new Padding(0) };
         _cboFiltroPrioridad.Items.Add("(Todas)");
         _cboFiltroPrioridad.Items.AddRange(Enum.GetNames<Prioridad>());
         _cboFiltroPrioridad.SelectedIndex = 0;
         _cboFiltroPrioridad.SelectedIndexChanged += (s, e) => RefrescarGrid();
 
-        panelFiltros.Controls.AddRange(new Control[]
+        _cboOrdenar = new ComboBox { FlatStyle = FlatStyle.Flat, DropDownStyle = ComboBoxStyle.DropDownList, Font = AppTheme.FontSmall, Dock = DockStyle.Fill, Margin = new Padding(0) };
+        _cboOrdenar.Items.AddRange(OpcionesOrden);
+        _cboOrdenar.SelectedIndex = 0;
+        _cboOrdenar.SelectedIndexChanged += (s, e) => RefrescarGrid();
+
+        _txtBusqueda = new TextBox
         {
-            lblEstado, _cboFiltroEstado,
-            lblCat, _cboFiltroCategoria,
-            lblPri, _cboFiltroPrioridad
-        });
+            BorderStyle = BorderStyle.FixedSingle,
+            Font = AppTheme.FontSmall,
+            PlaceholderText = "🔍 Buscar tareas...",
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0)
+        };
+        _txtBusqueda.TextChanged += (s, e) => RefrescarGrid();
+
+        panelFiltros.Controls.Add(CeldaFiltro("ESTADO", _cboFiltroEstado), 0, 0);
+        panelFiltros.Controls.Add(CeldaFiltro("CATEGORÍA", _cboFiltroCategoria), 1, 0);
+        panelFiltros.Controls.Add(CeldaFiltro("PRIORIDAD", _cboFiltroPrioridad), 2, 0);
+        panelFiltros.Controls.Add(CeldaFiltro("ORDENAR", _cboOrdenar), 3, 0);
+        panelFiltros.Controls.Add(CeldaFiltro("BUSCAR", _txtBusqueda), 4, 0);
 
         _flowTareas = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, WrapContents = false, FlowDirection = FlowDirection.TopDown, BackColor = AppTheme.BackgroundColor, Padding = new Padding(8, 8, 8, 8) };
         _flowTareas.SizeChanged += (s, e) => AjustarAnchoItems();
 
-        var panelAdd = new Panel { Dock = DockStyle.Bottom, Height = 48, BackColor = AppTheme.SurfaceColor, BorderStyle = BorderStyle.FixedSingle };
-        _addIcon = new Label { Text = "+", Font = new Font("Segoe UI", 18F, FontStyle.Bold), ForeColor = AppTheme.AccentColor, Location = new Point(14, 8), AutoSize = true };
-        _txtNueva = new TextBox { Location = new Point(42, 12), Width = 640, BorderStyle = BorderStyle.None, Font = AppTheme.FontItem, PlaceholderText = "Añadir una tarea" };
+        _lblEmpty = new Label
+        {
+            Text = "¡Añade tu primera tarea! 🎉",
+            Font = AppTheme.FontItem,
+            ForeColor = AppTheme.TextSecondary,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Dock = DockStyle.Fill,
+            Visible = false
+        };
+
+        var tableAdd = new TableLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 64,
+            ColumnCount = 4,
+            RowCount = 1,
+            BackColor = AppTheme.SurfaceColor,
+            Padding = new Padding(0, 1, 0, 0)
+        };
+        tableAdd.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 48));   // icono +
+        tableAdd.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));   // TextBox
+        tableAdd.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 106));  // Categorías
+        tableAdd.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));  // Personas
+        tableAdd.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        tableAdd.Paint += (s, e) => e.Graphics.DrawLine(new Pen(AppTheme.BorderColor, 1), 0, 0, tableAdd.Width, 0);
+
+        _addIcon = new Label
+        {
+            Text = "+", Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+            ForeColor = AppTheme.AccentColor, Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleCenter
+        };
+
+        _txtNueva = new TextBox
+        {
+            BorderStyle = BorderStyle.None, Font = AppTheme.FontItem,
+            PlaceholderText = "Añadir una tarea",
+            Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+            Margin = new Padding(0, 22, 8, 0)
+        };
         _txtNueva.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; CrearNuevaRapida(); } };
-        _btnCategorias = new Button { Text = "Categorías", Location = new Point(695, 8), Width = 90, FlatStyle = FlatStyle.Flat };
+
+        _btnCategorias = new Button
+        {
+            Text = "Categorías", FlatStyle = FlatStyle.Flat,
+            Dock = DockStyle.Fill, Margin = new Padding(2, 12, 2, 12)
+        };
         AppTheme.ApplyFlatButton(_btnCategorias, false);
         _btnCategorias.Click += (s, e) => AbrirCategorias();
 
-        _btnPersonas = new Button { Text = "Personas", Location = new Point(790, 8), Width = 90, FlatStyle = FlatStyle.Flat };
+        _btnPersonas = new Button
+        {
+            Text = "Personas", FlatStyle = FlatStyle.Flat,
+            Dock = DockStyle.Fill, Margin = new Padding(2, 12, 4, 12)
+        };
         AppTheme.ApplyFlatButton(_btnPersonas, false);
         _btnPersonas.Click += (s, e) => AbrirPersonas();
 
-        panelAdd.Controls.AddRange(new Control[] { _addIcon, _txtNueva, _btnCategorias, _btnPersonas });
+        tableAdd.Controls.Add(_addIcon, 0, 0);
+        tableAdd.Controls.Add(_txtNueva, 1, 0);
+        tableAdd.Controls.Add(_btnCategorias, 2, 0);
+        tableAdd.Controls.Add(_btnPersonas, 3, 0);
 
         Controls.Add(_flowTareas);
-        Controls.Add(panelAdd);
+        Controls.Add(_lblEmpty);
+        Controls.Add(tableAdd);
         Controls.Add(panelFiltros);
         Controls.Add(_topBar);
+    }
+
+    private static Panel CeldaFiltro(string etiqueta, Control control)
+    {
+        var panel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(4, 6, 4, 2) };
+        var lbl = new Label { Text = etiqueta, Font = AppTheme.FontMeta, ForeColor = AppTheme.TextSecondary, Dock = DockStyle.Top, Height = 13 };
+        control.Dock = DockStyle.Fill;
+        panel.Controls.Add(control);
+        panel.Controls.Add(lbl);
+        return panel;
     }
 
 
@@ -177,8 +288,27 @@ public class MainForm : Form
             ? Enum.Parse<Prioridad>(_cboFiltroPrioridad.SelectedItem!.ToString()!)
             : null;
 
+        var busqueda = _txtBusqueda.Text.Trim();
+
         var tareas = _tareaService.GetFiltered(estado, catId, prioridad);
 
+        if (!string.IsNullOrEmpty(busqueda))
+            tareas = tareas.Where(t =>
+                t.Titulo.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                (t.Descripcion?.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
+        tareas = _cboOrdenar.SelectedIndex switch
+        {
+            1 => tareas.OrderBy(t => t.FechaCreacion).ToList(),
+            2 => tareas.OrderBy(t => (int)t.Prioridad).ToList(),          // Alta=1 → primero
+            3 => tareas.OrderByDescending(t => (int)t.Prioridad).ToList(), // Baja=3 → primero
+            4 => tareas.OrderBy(t => t.FechaVencimiento ?? DateOnly.MaxValue).ToList(),
+            5 => tareas.OrderBy(t => t.Titulo, StringComparer.OrdinalIgnoreCase).ToList(),
+            _ => tareas.OrderByDescending(t => t.FechaCreacion).ToList()
+        };
+
+        _flowTareas.SuspendLayout();
         _flowTareas.Controls.Clear();
         foreach (var tarea in tareas)
         {
@@ -188,9 +318,25 @@ public class MainForm : Form
             item.DeleteRequested += (s, id) => EliminarTarea(id);
             _flowTareas.Controls.Add(item);
         }
+        _flowTareas.ResumeLayout();
 
         AjustarAnchoItems();
         _lblCount.Text = $"{tareas.Count} tareas";
+
+        var totalTareas = _tareaService.GetAll().Count;
+        if (tareas.Count == 0)
+        {
+            _lblEmpty.Text = totalTareas == 0
+                ? "¡Añade tu primera tarea! 🎉"
+                : "No hay tareas con estos filtros";
+            _lblEmpty.Visible = true;
+            _flowTareas.Visible = false;
+        }
+        else
+        {
+            _lblEmpty.Visible = false;
+            _flowTareas.Visible = true;
+        }
     }
     
        private void AbrirCategorias()
@@ -233,7 +379,7 @@ public class MainForm : Form
 
     private void NuevaTarea()
     {
-        using var form = new TareaForm(_categoriaService);
+        using var form = new TareaForm(_categoriaService, _personaService);
         if (form.ShowDialog(this) == DialogResult.OK)
         {
             try
@@ -254,7 +400,7 @@ public class MainForm : Form
         var tarea = _tareaService.GetAll().FirstOrDefault(t => t.Id == id);
         if (tarea is null) return;
 
-        using var form = new TareaForm(_categoriaService, tarea);
+        using var form = new TareaForm(_categoriaService, _personaService, tarea);
         if (form.ShowDialog(this) == DialogResult.OK)
         {
             try
@@ -294,8 +440,15 @@ public class MainForm : Form
 
         if (confirm != DialogResult.Yes) return;
 
-        _tareaService.Delete(tarea.Id);
-        RefrescarGrid();
+        try
+        {
+            _tareaService.Delete(tarea.Id);
+            RefrescarGrid();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, "Error al eliminar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
  

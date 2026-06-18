@@ -33,5 +33,11 @@ public class TareasDbContext : DbContext
             .WithMany(c => c.Tareas)
             .HasForeignKey(t => t.CategoriaId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Tarea>()
+            .HasOne(t => t.Persona)
+            .WithMany()
+            .HasForeignKey(t => t.PersonaId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
