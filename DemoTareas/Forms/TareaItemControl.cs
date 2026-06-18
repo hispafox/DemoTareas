@@ -1,3 +1,7 @@
+// Autor:   DemoTareas Team
+// Fecha:   2026-06-18
+// Versión: 1.0
+
 using DemoTareas.Models;
 using DemoTareas.Services;
 using DemoTareas.Utilities;
@@ -56,22 +60,29 @@ public partial class TareaItemControl : UserControl
         var title = _tarea.Titulo;
         var titleColor = _tarea.Estado == EstadoTarea.Completada ? AppTheme.TextCompleted : AppTheme.TextPrimary;
         using var titleFont = new Font("Segoe UI", 10F, FontStyle.Regular);
-        e.Graphics.DrawString(title, titleFont, new SolidBrush(titleColor), 40, 9);
+        var titleRect = new RectangleF(40, 6, Width - 76, 22);
+        using var titleSf = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap };
+        e.Graphics.DrawString(title, titleFont, new SolidBrush(titleColor), titleRect, titleSf);
 
         var meta = string.Join(" · ", new[]
         {
             _tarea.Categoria?.Nombre ?? "Sin categoría",
             _tarea.Prioridad.ToString(),
-            _tarea.FechaVencimiento.HasValue ? _tarea.FechaVencimiento.Value.ToString("dd/MM") : "Sin fecha"
-        });
+            _tarea.FechaVencimiento.HasValue ? _tarea.FechaVencimiento.Value.ToString("dd/MM") : "Sin fecha",
+            _tarea.Persona is not null ? $"👤 {_tarea.Persona.Nombre} {_tarea.Persona.Apellido}" : null
+        }.Where(s => s is not null));
         using var metaBrush = new SolidBrush(_tarea.FechaVencimiento.HasValue && _tarea.FechaVencimiento.Value < DateOnly.FromDateTime(DateTime.Today)
             ? AppTheme.DueDateColor
             : AppTheme.TextSecondary);
         using var metaFont = new Font("Segoe UI", 8.25F, FontStyle.Regular);
-        e.Graphics.DrawString(meta, metaFont, metaBrush, 40, 29);
+        var metaRect = new RectangleF(40, 28, Width - 76, 16);
+        using var metaSf = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, LineAlignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap };
+        e.Graphics.DrawString(meta, metaFont, metaBrush, metaRect, metaSf);
 
         var starColor = _tarea.Prioridad == Prioridad.Alta ? AppTheme.StarColor : AppTheme.TextSecondary;
-        e.Graphics.DrawString(_tarea.Prioridad == Prioridad.Alta ? "★" : "☆", new Font("Segoe UI", 10.5F, FontStyle.Bold), new SolidBrush(starColor), Width - 36, 14);
+        using var starFont = new Font("Segoe UI", 10.5F, FontStyle.Bold);
+        using var starBrush = new SolidBrush(starColor);
+        e.Graphics.DrawString(_tarea.Prioridad == Prioridad.Alta ? "★" : "☆", starFont, starBrush, Width - 36, 14);
 
         using var borderPen = new Pen(AppTheme.BorderColor, 1F);
         e.Graphics.DrawLine(borderPen, 0, Height - 1, Width, Height - 1);

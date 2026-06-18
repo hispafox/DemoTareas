@@ -1,3 +1,7 @@
+// Autor:   DemoTareas Team
+// Fecha:   2026-06-18
+// Versión: 1.0
+
 using DemoTareas.Data;
 using DemoTareas.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,14 +21,32 @@ public class TareaRepository : ITareaRepository
     {
         return _context.Tareas
             .Include(t => t.Categoria)
+            .Include(t => t.Persona)
             .OrderByDescending(t => t.FechaCreacion)
             .ToList();
+    }
+
+    public IList<Tarea> GetFiltered(EstadoTarea? estado, int? categoriaId, Prioridad? prioridad)
+    {
+        IQueryable<Tarea> query = _context.Tareas.Include(t => t.Categoria).Include(t => t.Persona);
+
+        if (estado.HasValue)
+            query = query.Where(t => t.Estado == estado.Value);
+
+        if (categoriaId.HasValue)
+            query = query.Where(t => t.CategoriaId == categoriaId.Value);
+
+        if (prioridad.HasValue)
+            query = query.Where(t => t.Prioridad == prioridad.Value);
+
+        return query.OrderByDescending(t => t.FechaCreacion).ToList();
     }
 
     public Tarea? GetById(int id)
     {
         return _context.Tareas
             .Include(t => t.Categoria)
+            .Include(t => t.Persona)
             .FirstOrDefault(t => t.Id == id);
     }
 

@@ -1,3 +1,7 @@
+// Autor:   DemoTareas Team
+// Fecha:   2026-06-18
+// Versión: 1.0
+
 using DemoTareas.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,6 +36,12 @@ public class TareasDbContext : DbContext
             .HasOne(t => t.Categoria)
             .WithMany(c => c.Tareas)
             .HasForeignKey(t => t.CategoriaId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Tarea>()
+            .HasOne(t => t.Persona)
+            .WithMany()
+            .HasForeignKey(t => t.PersonaId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }
